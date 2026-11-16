@@ -1,12 +1,6 @@
-AirCard-iOS
 MIT License
-Copyright (c) 2026 Johnny Franks
-https://github.com/Mak5er/AirCard-iOS
 
-GestaltX reuses AirCard-iOS's device connection path (RSD/Lockdown tunnel
-selection, RPPairing self-pairing host, and the syslog_relay read loop) in its
-native device console. The Airlift file-injection exploit is NOT used. See
-Native/DeviceConsole/NOTICE.md for the specific adaptations.
+Copyright (c) 2026 Johnny Franks
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
