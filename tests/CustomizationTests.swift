@@ -72,7 +72,8 @@ import ImageIO
         let providerPaths = try WallpaperPackages.providerPaths(in: device, provider: .mercury)
         try require(providerPaths.count == 1 && providerPaths[0].contains("/75/"), "Wallpaper store version was hardcoded")
         try await storeTests(root: root, fixtures: fixtures)
-        print("Customization tests passed: archive containment/CRC/limits, descriptor IDs, dynamic store versions, original absence, reopen/restore, rollback, stale writes, device binding, symlinks and complete wallpaper transactions.")
+        try await generatedRestoreTests(root: root)
+        print("Customization tests passed: archive containment/CRC/limits, descriptor IDs, dynamic store versions, original absence, reopen/restore, rollback, stale writes, device binding, symlinks, generated video-pack import and Restore Original.")
     }
     static func storeTests(root: URL, fixtures: URL) async throws {
         let poster = root.appendingPathComponent("PosterBoard")
@@ -122,5 +123,41 @@ import ImageIO
         try require(failed && afterFailure[0].installations.isEmpty, "Failed wallpaper operation left ownership records")
         try require(try fm.contentsOfDirectory(atPath: provider.path) == ["existing"], "Failed wallpaper operation left a descriptor/staging folder")
         try originalPrefs.write(to: prefs)
+    }
+
+    static func generatedRestoreTests(root: URL) async throws {
+        let poster = root.appendingPathComponent("RestorePosterBoard")
+        let library = root.appendingPathComponent("RestoreLibrary")
+        let provider = poster.appendingPathComponent("Library/Application Support/PRBPosterExtensionDataStore/61/Extensions/com.apple.WallpaperKit.CollectionsPoster/descriptors")
+        let existing = provider.appendingPathComponent("existing/Original.bin")
+        try fm.createDirectory(at: existing.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let untouched = Data("keep existing wallpaper".utf8)
+        try untouched.write(to: existing)
+        let prefs = poster.appendingPathComponent("Library/Preferences/com.apple.PosterBoard.unprotectedUserDefaults.plist")
+        try fm.createDirectory(at: prefs.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let originalPrefs = try PropertyListSerialization.data(fromPropertyList: ["unrelated": "keep"], format: .binary, options: 0)
+        try originalPrefs.write(to: prefs)
+        let generated = root.appendingPathComponent("GeneratedDescriptors")
+        let descriptor = generated.appendingPathComponent("videoCAML", isDirectory: true)
+        try fm.createDirectory(at: descriptor, withIntermediateDirectories: true)
+        try Data("9183".utf8).write(to: descriptor.appendingPathComponent("com.apple.posterkit.provider.descriptor.identifier"))
+        try Data("asset".utf8).write(to: descriptor.appendingPathComponent("frame.bin"))
+        let store = CustomizationStore(storage: library, device: "this-device", resolver: { _ in poster })
+        try require(!(try await store.hasRestorableWallpapers()), "Empty store reported restorable originals")
+        let imported = try await store.importGeneratedWallpaper(generated, name: "Video Wallpaper")
+        try require(imported.count == 1 && imported[0].name == "Video Wallpaper" && !imported[0].isApplied, "Generated descriptor was not imported")
+        let applied = try await store.applyWallpaper(imported[0].id)
+        try require(applied[0].isApplied && (try await store.hasRestorableWallpapers()), "Generated wallpaper was not applied")
+        try require(try Data(contentsOf: existing) == untouched, "Existing wallpaper changed by generated apply")
+        let restored = try await store.restoreOriginalWallpapers()
+        try require(restored.count == 1 && !restored[0].isApplied, "Restore Original deleted the imported pack or left it applied")
+        try require(try fm.contentsOfDirectory(atPath: provider.path) == ["existing"], "Restore Original affected unowned wallpapers")
+        try require(try Data(contentsOf: existing) == untouched, "Existing wallpaper changed by restore")
+        let prefsAfter = try PropertyListSerialization.propertyList(from: Data(contentsOf: prefs), format: nil) as! [String: Any]
+        try require(prefsAfter["unrelated"] as? String == "keep" && prefsAfter["PBF_RESET_FILE_PROTECTIONS"] == nil, "PosterBoard defaults were not restored")
+        try require(!(try await store.hasRestorableWallpapers()), "Restore Original left restorable state")
+        var emptyFailed = false
+        do { _ = try await store.restoreOriginalWallpapers() } catch { emptyFailed = true }
+        try require(emptyFailed, "Restore Original succeeded when there was nothing to restore")
     }
 }

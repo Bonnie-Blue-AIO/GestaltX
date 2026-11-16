@@ -11,6 +11,9 @@ struct WallpaperVideosView: View {
     @State private var loading = false
     @State private var confirmApply = false
     @State private var presentationOwner = UUID()
+    @State private var page = 0
+    @State private var now = Date()
+    private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     private var remaining: Int { max(0, WallpaperVideos.maximumVideos - model.videos.count) }
     private var limit: Int { Int(ignoreDurationLimit ? WallpaperVideos.extendedDuration : WallpaperVideos.maximumDuration) }
@@ -18,44 +21,11 @@ struct WallpaperVideosView: View {
     var body: some View {
         List {
             Section {
-                Text(L("Pick short videos to turn into a live wallpaper. Each video becomes one wallpaper in a new pack, added to the wallpaper gallery without replacing your existing wallpapers."))
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section {
-                ForEach($model.videos) { $video in
-                    HStack(spacing: 14) {
-                        LoopingVideoPlayer(url: video.url)
-                            .frame(width: 70, height: 110)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                            .allowsHitTesting(false)
-                        VStack(alignment: .leading, spacing: 8) {
-                            Label(String(format: L("%.1f s"), video.duration), systemImage: "clock")
-                                .font(.caption).foregroundStyle(.secondary)
-                            Toggle(isOn: $video.autoReverses) {
-                                Label(L("Loop Back and Forth"), systemImage: "arrow.left.arrow.right")
-                            }
-                            .font(.subheadline)
-                        }
-                    }
-                    .padding(.vertical, 5)
-                }
-                .onDelete { model.removeVideos(at: $0) }
-
-                if remaining > 0 {
-                    PhotosPicker(selection: $pickerItems, maxSelectionCount: remaining, matching: .videos, photoLibrary: .shared()) {
-                        Label(L("Choose Videos"), systemImage: "video.badge.plus")
-                    }
-                    .disabled(loading)
-                }
-                if loading {
-                    HStack { ProgressView(); Text(L("Importing…")).foregroundStyle(.secondary) }
-                }
-            } header: {
-                Text(String(format: L("Videos (%d/%d)"), model.videos.count, WallpaperVideos.maximumVideos))
+                phoneCarousel
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
             } footer: {
-                Text(String(format: L("Up to %d videos, %d seconds or less each. Swipe a video to remove it."), WallpaperVideos.maximumVideos, limit))
+                Text(L("Pick a short video. GestaltX converts it into a Collections wallpaper and writes it with worse_query. No PosterBoard app hash is required."))
             }
 
             Section {
@@ -77,7 +47,7 @@ struct WallpaperVideosView: View {
                 if let progress = model.videoProgress {
                     Text(progress)
                 } else {
-                    Text(L("Videos are converted into frame-by-frame wallpapers (up to 30 fps). If a wallpaper does not appear, use Clear Collections in Wallpaper Settings."))
+                    Text(L("Videos are converted into frame-by-frame wallpapers (up to 30 fps). If a wallpaper does not appear, use Clear Collections in Wallpaper Settings, then force-close PosterBoard."))
                 }
             }
         }
@@ -90,6 +60,7 @@ struct WallpaperVideosView: View {
             model.videosScreenOpen = false
             model.setPresenting(false, owner: presentationOwner)
         }
+        .onReceive(timer) { now = $0 }
         .onChange(of: confirmApply || model.message != nil, initial: true) { _, presenting in
             model.setPresenting(presenting, owner: presentationOwner)
         }
@@ -101,10 +72,102 @@ struct WallpaperVideosView: View {
         .alert(L("Apply these changes?"), isPresented: $confirmApply) {
             Button(L("Cancel"), role: .cancel) {}
             Button(L("Apply")) { Task { await model.createVideoWallpaper(apply: true) } }
-        } message: { Text(L("This adds new wallpapers without replacing your existing ones.")) }
+        } message: { Text(L("This adds new wallpapers without replacing your existing ones. After applying, open PosterBoard and force-close it.")) }
         .alert(L("GestaltX"), isPresented: Binding(get: { model.message != nil && model.videosScreenOpen }, set: { if !$0 { model.message = nil } })) {
             Button(L("OK"), role: .cancel) { model.message = nil }
         } message: { Text(model.message ?? "") }
+    }
+
+    private var phoneCarousel: some View {
+        TabView(selection: $page) {
+            ForEach(Array(model.videos.enumerated()), id: \.element.id) { index, video in
+                phoneCard {
+                    LoopingVideoPlayer(url: video.url)
+                        .scaledToFill()
+                    VStack {
+                        Text(Self.dateFormatter.string(from: now)).shadow(radius: 8)
+                        Text(Self.timeFormatter.string(from: now))
+                            .font(.system(size: 54, weight: .semibold, design: .rounded))
+                            .shadow(radius: 8)
+                        Spacer()
+                        Text(String(format: L("%.1f s"), video.duration))
+                            .font(.caption.weight(.semibold))
+                            .padding(.bottom, 16)
+                    }
+                    .padding(.top, 32)
+                    .foregroundStyle(.white)
+                }
+                .overlay(alignment: .topLeading) {
+                    Button {
+                        model.removeVideos(at: IndexSet(integer: index))
+                        page = min(page, max(0, model.videos.count - (remaining > 0 ? 0 : 1)))
+                    } label: {
+                        Image(systemName: "minus.circle.fill")
+                            .font(.title)
+                            .symbolRenderingMode(.palette)
+                            .foregroundStyle(.white, .red)
+                            .shadow(radius: 4)
+                    }
+                    .offset(x: -8, y: -8)
+                    .disabled(loading)
+                }
+                .overlay(alignment: .topTrailing) {
+                    Button {
+                        model.videos[index].autoReverses.toggle()
+                    } label: {
+                        Image(systemName: "arrow.left.arrow.right.circle.fill")
+                            .font(.title)
+                            .symbolRenderingMode(.palette)
+                            .foregroundStyle(.white, video.autoReverses ? Color.blue : Color.gray.opacity(0.9))
+                            .shadow(radius: 4)
+                    }
+                    .offset(x: 8, y: -8)
+                    .disabled(loading)
+                    .accessibilityLabel(L("Loop Back and Forth"))
+                }
+                .tag(index)
+            }
+            if remaining > 0 {
+                phoneCard {
+                    PhotosPicker(selection: $pickerItems, maxSelectionCount: remaining, matching: .videos, photoLibrary: .shared()) {
+                        VStack(spacing: 14) {
+                            if loading {
+                                ProgressView()
+                                Text(L("Importing…")).font(.headline)
+                            } else {
+                                ZStack {
+                                    Circle().fill(Color.blue).frame(width: 48, height: 48)
+                                    Image(systemName: "plus").font(.title).foregroundStyle(.white)
+                                }
+                                Text(L("Choose a Video")).font(.headline)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .foregroundStyle(.primary)
+                    }
+                    .disabled(loading)
+                }
+                .tag(model.videos.count)
+            }
+        }
+        .tabViewStyle(.page(indexDisplayMode: .always))
+        .frame(height: 440)
+    }
+
+    @ViewBuilder
+    private func phoneCard<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        ZStack {
+            Color.black.opacity(0.65)
+            content().clipped()
+        }
+        .frame(width: 240, height: 380)
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .stroke(Color.gray, lineWidth: 3)
+        }
+        .shadow(radius: 6)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private func load(_ items: [PhotosPickerItem]) async {
@@ -115,7 +178,11 @@ struct WallpaperVideosView: View {
                 guard let movie = try await item.loadTransferable(type: PickedMovie.self) else {
                     problems.append(L("The video could not be read.")); continue
                 }
-                if let problem = await model.addVideo(movie.url, ignoreLimit: ignoreDurationLimit) { problems.append(problem) }
+                if let problem = await model.addVideo(movie.url, ignoreLimit: ignoreDurationLimit) {
+                    problems.append(problem)
+                } else {
+                    page = max(0, model.videos.count - 1)
+                }
             } catch {
                 problems.append(error.localizedDescription)
             }
@@ -124,4 +191,15 @@ struct WallpaperVideosView: View {
             model.message = L("Failed to Import Video") + "\n\n" + Array(Set(problems)).joined(separator: "\n")
         }
     }
+
+    private static let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE, MMMM d"
+        return formatter
+    }()
+    private static let timeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = Locale.current.hourCycle == .zeroToEleven || Locale.current.hourCycle == .oneToTwelve ? "h:mm" : "HH:mm"
+        return formatter
+    }()
 }
