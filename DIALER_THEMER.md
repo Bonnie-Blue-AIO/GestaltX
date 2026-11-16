@@ -17,6 +17,9 @@ The green call button cannot be themed (same limitation as Erosion).
 
 ## Build
 
+Fork marketing version: **1.1.1-dialer** (build 11140103) so the IPA is distinguishable from upstream 1.1.1.
+
+
 GitHub Actions (`.github/workflows/build.yml`) builds an **ad-hoc** IPA on pushes to `dialer-themer` / `main`, tags `v*`, and `workflow_dispatch`. Re-sign with AltStore / SideStore / TrollStore while preserving App Group `group.com.huami.gestultx`.
 
 ## License / credit

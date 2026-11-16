@@ -311,25 +311,28 @@ final class DialerThemerModel: ObservableObject {
             try CustomizationArchive.extract(fileURL, into: temp)
             defer { try? fm.removeItem(at: temp) }
 
+            let telephonyNames: Set<String> = ["TelephonyUI-8", "TelephonyUI-9", "TelephonyUI-10"]
+            func firstTelephonyUI(in directory: URL) -> URL? {
+                let kids = (try? fm.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles])) ?? []
+                if let match = kids.first(where: { telephonyNames.contains($0.lastPathComponent) }) {
+                    return match
+                }
+                for kid in kids {
+                    guard (try? kid.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true else { continue }
+                    if let nested = firstTelephonyUI(in: kid) { return nested }
+                }
+                return nil
+            }
+
             var themeRoot = temp
             let top = try fm.contentsOfDirectory(at: temp, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles])
-            if top.count == 1, (try? top[0].resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true {
-                themeRoot = top[0]
-            } else if let match = top.first(where: {
-                ["TelephonyUI-8", "TelephonyUI-9", "TelephonyUI-10"].contains($0.lastPathComponent)
-            }) {
+            if let match = top.first(where: { telephonyNames.contains($0.lastPathComponent) }) {
                 themeRoot = match
-            } else {
-                // Flat zip with PNGs directly under temp, or nested one level deeper.
-                let nested = top.compactMap { url -> URL? in
-                    guard (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true else { return nil }
-                    let kids = (try? fm.contentsOfDirectory(at: url, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])) ?? []
-                    if kids.contains(where: { ["TelephonyUI-8", "TelephonyUI-9", "TelephonyUI-10"].contains($0.lastPathComponent) }) {
-                        return kids.first { ["TelephonyUI-8", "TelephonyUI-9", "TelephonyUI-10"].contains($0.lastPathComponent) }
-                    }
-                    return nil
-                }.first
-                if let nested { themeRoot = nested }
+            } else if let nested = firstTelephonyUI(in: temp) {
+                themeRoot = nested
+            } else if top.count == 1, (try? top[0].resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true {
+                // Single wrapper folder with PNGs directly inside (no TelephonyUI-* name).
+                themeRoot = top[0]
             }
 
             let appearanceWanted = UIScreen.main.traitCollection.userInterfaceStyle == .dark ? "white" : "mask"
