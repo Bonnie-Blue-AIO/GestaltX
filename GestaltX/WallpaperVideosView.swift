@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Videos screen ported from Pocket Poster's VideoView by leminlimez (GPL-3.0):
 // https://github.com/leminlimez/Pocket-Poster. See Licenses/Pocket-Poster-GPL-3.0.txt.
+import Combine
 import PhotosUI
 import SwiftUI
 
