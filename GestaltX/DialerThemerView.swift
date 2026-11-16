@@ -58,7 +58,7 @@ struct DialerThemerView: View {
                         Label(L("Clear Keys"), systemImage: "xmark")
                     }
                     Button(role: .destructive) { askReset = true } label: {
-                        Label(L("Reset Keys"), systemImage: "trash")
+                        Label(L("Restore Original"), systemImage: "arrow.uturn.backward")
                     }
                 } label: {
                     Label(L("Menu"), systemImage: "ellipsis.circle")
@@ -96,9 +96,9 @@ struct DialerThemerView: View {
         } message: {
             Text(L("Enter width and height in points (50–2500)."))
         }
-        .alert(L("Reset dialer keys?"), isPresented: $askReset) {
+        .alert(L("Restore Original"), isPresented: $askReset) {
             Button(L("Cancel"), role: .cancel) {}
-            Button(L("Reset"), role: .destructive) {
+            Button(L("Restore"), role: .destructive) {
                 if model.reset() { askOpenPhone = true }
             }
         } message: {

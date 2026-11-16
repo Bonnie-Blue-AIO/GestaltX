@@ -114,7 +114,7 @@ struct DialerKeyItem: Identifiable, Equatable {
 }
 
 enum DialerThemerMsg {
-    static let resetWarn = "You'll lose both what you're currently editing and what you've already set inside of the Phone app."
+    static let resetWarn = "Restore the Phone dialer keys to their original look? You'll lose both what you're currently editing and what you've already set inside of the Phone app."
     static let applyComp = "For changes to take effect, open the Phone app and change the appearance until your custom keys show up. You can also restart your device. Do NOT force kill the Phone app!"
     static let phoneBundle = "com.apple.mobilephone"
     static let telephonyFolder = "Library/Caches/TelephonyUI-10"
