@@ -387,9 +387,6 @@ struct ContentView: View {
                 NavigationLink { DialerThemerView() } label: {
                     Label(L("Dialer Themer"), systemImage: "circle.grid.3x3")
                 }.disabled(model.isBusy)
-                NavigationLink { WalletCardSkinsView() } label: {
-                    Label(L("Wallet Card Skins"), systemImage: "creditcard")
-                }.disabled(model.isBusy)
             }
             Section(L("Actions")) {
                 if model.snapshot?.source == .local && model.snapshot?.ownershipVerified == true {

@@ -43,13 +43,7 @@ lunginspector / jailbreak.party. GNU GPL v3; full text: GestaltX/Licenses/Erosio
 Ported KeypadManager / KeypadView into GestaltX, using GestaltX's resolveDataContainer, acquirePath / worse_query, and ZIPFoundation. No Erosion IPA binary was copied.
 
 
-4b. Wallet Card Skins (Bonnie-Blue-AIO fork)
-AirCard-iOS: https://github.com/Mak5er/AirCard-iOS
-Mak5er / Johnny Franks. MIT License; see GestaltX/Licenses/AirCard-MIT.txt.
-Card artwork sizing/naming adapted from AirCard ImageEngine / flash paths. File injection uses GestaltX acquirePath / worse_query against /var/mobile/Library/Passes/Cards (not Airlift). Live Apple Pay card scanning via Airlift syslog is not included.
-
-
-4c. Wallpaper Clear Collections + Videos (Bonnie-Blue-AIO fork)
+4b. Wallpaper Clear Collections + Videos (Bonnie-Blue-AIO fork)
 Pocket Poster: https://github.com/leminlimez/Pocket-Poster (commit fb07aa4)
 leminlimez and contributors. GNU GPL v3; full text: GestaltX/Licenses/Pocket-Poster-GPL-3.0.txt.
 Ported: "Reset Collections" (shown in GestaltX as Clear Collections; re-applies the system language via IPSettingsUtilities setLanguage:), the Videos feature (VideoHandler CAML frame generation, PlayerView / LoopingPlayerUIView preview) and the bundled Resources/VideoCAML descriptor template (GestaltX/Resources/VideoCAML).

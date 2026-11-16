@@ -13,11 +13,11 @@ on:
   release:
     types: [published]
   push:
-    branches: [main, dialer-themer, wallet-card-skins]
+    branches: [main, dialer-themer, wallet-card-skins, wallpaper-clear-videos]
     tags:
       - "v*"
   pull_request:
-    branches: [main, dialer-themer, wallet-card-skins]
+    branches: [main, dialer-themer, wallet-card-skins, wallpaper-clear-videos]
   workflow_dispatch:
     inputs:
       ref:

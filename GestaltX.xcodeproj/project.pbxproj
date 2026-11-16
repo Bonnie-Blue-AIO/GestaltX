@@ -454,7 +454,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = GestaltX/GestaltX.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11140105;
+				CURRENT_PROJECT_VERSION = 11140106;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -471,7 +471,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.1-wallpaper;
+				MARKETING_VERSION = 1.1.1-no-wallet;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-lc++",
@@ -503,7 +503,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = GestaltX/GestaltX.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11140105;
+				CURRENT_PROJECT_VERSION = 11140106;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -520,7 +520,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.1-wallpaper;
+				MARKETING_VERSION = 1.1.1-no-wallet;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-lc++",
@@ -551,7 +551,7 @@
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_ENTITLEMENTS = ShareExtension/GestaltXShare.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11140105;
+				CURRENT_PROJECT_VERSION = 11140106;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ShareExtension/Info.plist;
@@ -561,7 +561,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.1-wallpaper;
+				MARKETING_VERSION = 1.1.1-no-wallet;
 				PRODUCT_BUNDLE_IDENTIFIER = com.huami.gestultx.ShareExtension;
 				PRODUCT_NAME = GestaltXShare;
 				REGISTER_APP_GROUPS = YES;
@@ -584,7 +584,7 @@
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_ENTITLEMENTS = ShareExtension/GestaltXShare.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11140105;
+				CURRENT_PROJECT_VERSION = 11140106;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ShareExtension/Info.plist;
@@ -594,7 +594,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.1-wallpaper;
+				MARKETING_VERSION = 1.1.1-no-wallet;
 				PRODUCT_BUNDLE_IDENTIFIER = com.huami.gestultx.ShareExtension;
 				PRODUCT_NAME = GestaltXShare;
 				REGISTER_APP_GROUPS = YES;
