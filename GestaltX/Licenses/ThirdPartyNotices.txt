@@ -45,6 +45,7 @@ Erosion: https://github.com/jailbreakdotparty/Erosion
 lunginspector / jailbreak.party and contributors. GNU GPL version 3; full text: Erosion-GPL-3.0.txt.
 Reference for .tendies descriptor layouts.
 GestaltX adds its own native interface, bounded archive validation, runtime container identity checks, isolated wallpaper ownership records, verified writes and original-file recovery.
+Dialer Themer (this fork): KeypadManager / KeypadView logic ported from Erosion into GestaltX, adapted to GestaltX container resolution (resolveDataContainer / acquirePath) and ZIPFoundation. Original Erosion authors retain copyright on the ported algorithm; see Erosion-GPL-3.0.txt.
 
 ZIPFoundation 0.9.20: https://github.com/weichsel/ZIPFoundation
 Thomas Zoechling. MIT License; full text: ZIPFoundation-MIT.txt.

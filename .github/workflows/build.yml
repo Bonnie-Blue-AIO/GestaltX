@@ -13,17 +13,17 @@ on:
   release:
     types: [published]
   push:
-    branches: [main]
+    branches: [main, dialer-themer]
     tags:
       - "v*"
   pull_request:
-    branches: [main]
+    branches: [main, dialer-themer]
   workflow_dispatch:
     inputs:
       ref:
         description: Branch, tag, or commit to build
         type: string
-        default: main
+        default: dialer-themer
 
 permissions:
   contents: write
@@ -98,7 +98,7 @@ jobs:
           version="${TAG#v}"
           notes="$RUNNER_TEMP/release-notes.md"
           : > "$notes"
-          printf 'English | [简体中文](https://github.com/huamidev/GestaltX/blob/%s/CHANGELOG_ZH-CN.md)\n\n' "$TAG" > "$notes"
+          printf 'English | [简体中文](https://github.com/%s/blob/%s/CHANGELOG_ZH-CN.md)\n\n' "${{ github.repository }}" "$TAG" > "$notes"
           if [[ -f CHANGELOG.md ]]; then
             awk -v ver="$version" '
               $0 ~ "^## \\[" ver "\\]" { found = 1; next }
