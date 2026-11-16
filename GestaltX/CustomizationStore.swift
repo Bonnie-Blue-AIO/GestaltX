@@ -82,6 +82,15 @@ actor CustomizationStore {
         let temporary = fm.temporaryDirectory.appendingPathComponent("GX-Wallpaper-\(UUID().uuidString)")
         defer { try? fm.removeItem(at: temporary) }
         try CustomizationArchive.extract(source, into: temporary)
+        return try importDescriptors(in: temporary, name: source.deletingPathExtension().lastPathComponent, id: id)
+    }
+    /// Imports descriptor folders GestaltX generated itself (for example video wallpapers
+    /// built from the bundled VideoCAML template). The folder is consumed by the caller.
+    func importGeneratedWallpaper(_ directory: URL, name: String, id: UUID = UUID()) throws -> [WallpaperPack] {
+        if fm.fileExists(atPath: manifest(id).path) { _ = try loadPack(id); return try listWallpapers() }
+        return try importDescriptors(in: directory, name: name, id: id)
+    }
+    private func importDescriptors(in temporary: URL, name: String, id: UUID) throws -> [WallpaperPack] {
         let descriptors = try WallpaperPackages.descriptors(in: temporary)
         let destination = folder(id)
         try fm.createDirectory(at: wallpapers, withIntermediateDirectories: true)
@@ -89,7 +98,7 @@ actor CustomizationStore {
         var saved = false
         defer { if !saved { try? fm.removeItem(at: staging) } }
         try fm.createDirectory(at: staging, withIntermediateDirectories: false)
-        var pack = WallpaperPack(id: id, name: source.deletingPathExtension().lastPathComponent, descriptors: [])
+        var pack = WallpaperPack(id: id, name: name, descriptors: [])
         for (sourceFolder, provider) in descriptors {
             let name = UUID().uuidString
             let target = staging.appendingPathComponent(name)
