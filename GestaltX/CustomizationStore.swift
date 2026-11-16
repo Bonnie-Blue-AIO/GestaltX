@@ -250,4 +250,60 @@ actor CustomizationStore {
         log("Wallpapers: removed only this pack's tracked additions.")
         return try listWallpapers()
     }
+
+    func hasRestorableWallpapers() throws -> Bool {
+        if try listWallpapers().contains(where: { $0.isApplied && ($0.installedDevice == nil || $0.installedDevice == device) }) {
+            return true
+        }
+        return posterBoardDefaultsJournalHasOriginals()
+    }
+
+    private func posterBoardDefaultsTransaction(root: URL) -> CustomizationFileTransaction {
+        CustomizationFileTransaction(root: root, storage: storage.appendingPathComponent("PosterBoardDefaults"), device: device)
+    }
+
+    private func posterBoardDefaultsJournalHasOriginals() -> Bool {
+        let url = storage.appendingPathComponent("PosterBoardDefaults/Originals.plist")
+        guard fm.fileExists(atPath: url.path),
+              let journal = try? PropertyListDecoder().decode(CustomizationJournal.self, from: Data(contentsOf: url)),
+              journal.device == device else { return false }
+        return !journal.originals.isEmpty
+    }
+
+    /// Removes GestaltX-installed wallpaper descriptors and restores the first PosterBoard defaults backup.
+    func restoreOriginalWallpapers() throws -> [WallpaperPack] {
+        let packs = try listWallpapers()
+        let owned = packs.filter { $0.isApplied && ($0.installedDevice == nil || $0.installedDevice == device) }
+        let foreign = packs.contains { $0.isApplied && $0.installedDevice != nil && $0.installedDevice != device }
+        guard !owned.isEmpty || posterBoardDefaultsJournalHasOriginals() else {
+            if foreign { throw CustomizationFailure("These wallpapers were applied on a different device. They were not removed.") }
+            throw CustomizationFailure("There is nothing to restore.")
+        }
+        try access("com.apple.PosterBoard") { root in
+            for pack in owned {
+                for entry in pack.installations {
+                    let url = try installationURL(entry.relative, root: root)
+                    if fm.fileExists(atPath: url.path), try CustomizationFiles.tree(url) != entry.files, entry.committed {
+                        throw CustomizationFailure("This wallpaper was changed outside GestaltX. It was not removed.")
+                    }
+                }
+            }
+            for pack in owned {
+                for entry in pack.installations { try removeInstallation(entry, root: root) }
+            }
+            let writer = posterBoardDefaultsTransaction(root: root)
+            if writer.hasOriginals { try writer.restore() }
+            // Drop the first-backup journal so Restore Original disables until the next apply.
+            let journalURL = storage.appendingPathComponent("PosterBoardDefaults/Originals.plist")
+            if fm.fileExists(atPath: journalURL.path) { try fm.removeItem(at: journalURL) }
+        }
+        for pack in owned {
+            var updated = pack
+            updated.installations = []
+            updated.installedDevice = nil
+            try savePack(updated)
+        }
+        log("Wallpapers: restored original PosterBoard files and removed GestaltX-added descriptors.")
+        return try listWallpapers()
+    }
 }
