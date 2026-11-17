@@ -128,6 +128,7 @@ final class CustomizationModel: ObservableObject {
         let selected = videos
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("GX-VideoWallpaper-\(UUID().uuidString)", isDirectory: true)
         defer { try? FileManager.default.removeItem(at: directory) }
+        var imported = false
         do {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             for (index, video) in selected.enumerated() {
@@ -145,6 +146,7 @@ final class CustomizationModel: ObservableObject {
             let formatter = DateFormatter(); formatter.dateStyle = .medium; formatter.timeStyle = .short
             let id = UUID()
             packs = try await store.importGeneratedWallpaper(directory, name: String(format: L("Video Wallpaper %@"), formatter.string(from: Date())), id: id)
+            imported = true
             await loadPreviews()
             if apply {
                 videoProgress = L("Applying…")
@@ -154,15 +156,25 @@ final class CustomizationModel: ObservableObject {
             } else {
                 message = L("Video wallpaper saved to Wallpaper Settings. Tap Apply on it when you're ready.")
             }
-            // Tear down LoopingVideoPlayer / AVPlayerLooper before deleting the files they are still reading.
-            videos.removeAll { item in selected.contains { $0.id == item.id } }
-            await Task.yield()
-            try? await Task.sleep(nanoseconds: 80_000_000)
-            for video in selected { try? FileManager.default.removeItem(at: video.url) }
+            await discardQueuedVideos(selected)
         } catch is CancellationError {
+            if imported { await discardQueuedVideos(selected) }
         } catch {
-            message = error.localizedDescription + (apply ? "\n\n" + L("If this keeps failing, tap Clear Collections and try again.") : "")
+            if imported && apply {
+                message = error.localizedDescription + "\n\n" + L("The pack was saved in Wallpaper Settings. Tap Apply on it after you Clear Collections, rather than creating it again.")
+            } else {
+                message = error.localizedDescription + (apply ? "\n\n" + L("If this keeps failing, tap Clear Collections and try again.") : "")
+            }
+            if imported { await discardQueuedVideos(selected) }
         }
+    }
+    /// Drops already-imported clips so a retry cannot create a second pack.
+    /// Tears down LoopingVideoPlayer / AVPlayerLooper before deleting the files they are still reading.
+    private func discardQueuedVideos(_ selected: [WallpaperVideo]) async {
+        videos.removeAll { item in selected.contains { $0.id == item.id } }
+        await Task.yield()
+        try? await Task.sleep(nanoseconds: 80_000_000)
+        for video in selected { try? FileManager.default.removeItem(at: video.url) }
     }
     func removeWallpaper(_ pack: WallpaperPack) async {
         await run { packs = try await store.removeWallpaper(pack.id); previews.removeValue(forKey: pack.id) }

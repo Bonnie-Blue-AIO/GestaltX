@@ -14,24 +14,6 @@ enum DialerKeyID: String, CaseIterable, Identifiable {
     case one, two, three, four, five, six, seven, eight, nine, star, zero, pound
     var id: String { rawValue }
 
-    /// Substring matched against TelephonyUI cache filenames (after the device prefix).
-    var matchToken: String {
-        switch self {
-        case .one: return "1"
-        case .two: return "2-A B C"
-        case .three: return "3-D E F"
-        case .four: return "4-G H I"
-        case .five: return "5-J K L"
-        case .six: return "6-M N O"
-        case .seven: return "7-P Q R S"
-        case .eight: return "8-T U V"
-        case .nine: return "9-W X Y Z"
-        case .star: return "*"
-        case .zero: return "0-+"
-        case .pound: return "#"
-        }
-    }
-
     var displayLabel: String {
         switch self {
         case .one: return "1"
