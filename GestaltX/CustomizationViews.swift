@@ -90,20 +90,35 @@ final class CustomizationModel: ObservableObject {
             return String(format: L("You can add up to %d videos."), WallpaperVideos.maximumVideos)
         }
         let limit = ignoreLimit ? WallpaperVideos.extendedDuration : WallpaperVideos.maximumDuration
-        guard let duration = try? await WallpaperVideos.duration(of: url), duration > 0 else {
+        let duration: Double
+        do {
+            duration = try await WallpaperVideos.duration(of: url)
+        } catch {
             try? FileManager.default.removeItem(at: url)
+            CustomizationArchive.log("Videos: could not read duration for \(url.lastPathComponent) (\(error.localizedDescription))")
+            return L("The video could not be read.")
+        }
+        // Non-finite values (indefinite → infinity, invalid → NaN) must not be treated as "too long".
+        guard duration.isFinite, duration > 0 else {
+            try? FileManager.default.removeItem(at: url)
+            CustomizationArchive.log("Videos: unreadable duration for \(url.lastPathComponent) (raw \(duration)s)")
             return L("The video could not be read.")
         }
         guard duration <= limit + 0.05 else {
             try? FileManager.default.removeItem(at: url)
+            CustomizationArchive.log("Videos: rejected too-long clip \(url.lastPathComponent) (\(duration)s, limit \(limit)s)")
             return String(format: L("The video you imported is too long! Your video must be %d seconds or less."), Int(limit))
         }
         videos.append(WallpaperVideo(url: url, duration: duration))
         return nil
     }
     func removeVideos(at offsets: IndexSet) {
-        for index in offsets { try? FileManager.default.removeItem(at: videos[index].url) }
+        let urls = offsets.compactMap { videos.indices.contains($0) ? videos[$0].url : nil }
+        // Drop the rows first so LoopingVideoPlayer is dismantled before the files go away.
         videos.remove(atOffsets: offsets)
+        DispatchQueue.main.async {
+            for url in urls { try? FileManager.default.removeItem(at: url) }
+        }
     }
     /// Generates one CollectionsPoster descriptor per video, imports them as a single
     /// wallpaper pack, and optionally applies it through the normal pipeline.
@@ -139,8 +154,11 @@ final class CustomizationModel: ObservableObject {
             } else {
                 message = L("Video wallpaper saved to Wallpaper Settings. Tap Apply on it when you're ready.")
             }
-            for video in selected { try? FileManager.default.removeItem(at: video.url) }
+            // Tear down LoopingVideoPlayer / AVPlayerLooper before deleting the files they are still reading.
             videos.removeAll { item in selected.contains { $0.id == item.id } }
+            await Task.yield()
+            try? await Task.sleep(nanoseconds: 80_000_000)
+            for video in selected { try? FileManager.default.removeItem(at: video.url) }
         } catch is CancellationError {
         } catch {
             message = error.localizedDescription + (apply ? "\n\n" + L("If this keeps failing, tap Clear Collections and try again.") : "")
