@@ -2,6 +2,30 @@
 
 English | [简体中文](CHANGELOG_ZH-CN.md)
 
+## [1.1.2] - 2026-11-18
+
+Build `11140108`.
+
+### Added
+
+- Dialer Themer: import a TelephonyUI-8/9/10 theme zip, preview the 12 keypad keys, and apply them to the Phone app (`Tools → Customization → Dialer Themer`). Restore Original puts the stock keys back. Ported from Erosion (GPL v3).
+- Clear Collections: in `Tools → Customization → Wallpapers`, re-apply the current system language so PosterBoard rebuilds its collections. Use it when Apply fails because a file already exists, or a new wallpaper does not appear. Existing wallpapers are kept. Ported from Pocket Poster's Reset Collections (GPL v3).
+- Videos wallpapers: in `Tools → Customization → Wallpapers → Videos`, pick up to 5 clips (12 s each, or 60 s with Ignore 12-Second Limit), preview them, then Create & Apply or Save to Wallpaper List. Clips are converted with the bundled VideoCAML template and installed through GestaltX's existing worse_query PosterBoard pipeline. Ported from Pocket Poster (GPL v3).
+
+### Fixed
+
+- Restore Original after Delete now also consumes leftover installation records whose pack folder is already gone, so those descriptors are actually uninstalled.
+- Videos no longer treat an unreadable (non-finite) duration as "too long". A post-apply crash from tearing down the looping preview too late is fixed, and a failed or cancelled Apply after a successful import no longer creates a duplicate pack on retry.
+- Add the missing CustomizationStore Restore Original APIs so the wallpaper settings screen compiles.
+
+### Changed
+
+- Marketing version is 1.1.2 (build 11140108). CI names the IPA and artifact `GestaltX-v1.1.2`.
+
+### Removed
+
+- Wallet Card Skins was prototyped and then removed: it could not apply card artwork without Airlift, which is not included.
+
 ## [1.1.1] - 2026-11-14
 
 Build `11140102`.
