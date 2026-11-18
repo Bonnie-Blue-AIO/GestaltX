@@ -52,8 +52,29 @@ enum WallpaperVideos {
         FileManager.default.temporaryDirectory.appendingPathComponent("GX-PickedVideos", isDirectory: true)
     }
 
+    /// Hard cap so a bad duration (or Ignore Limit + a long clip) cannot explode memory or the 4000-file tree limit.
+    static let maximumFrameCount = Int(extendedDuration * maximumFrameRate) + 60
+
+    /// Prefers the asset duration; if it is indefinite, NaN, or non-positive, falls back to the video track time range.
     static func duration(of url: URL) async throws -> Double {
-        try await AVURLAsset(url: url).load(.duration).seconds
+        let asset = AVURLAsset(url: url)
+        if let seconds = finitePositiveSeconds(try await asset.load(.duration)) {
+            return seconds
+        }
+        guard let track = try await asset.loadTracks(withMediaType: .video).first else {
+            throw CustomizationFailure("The video could not be read.")
+        }
+        if let seconds = finitePositiveSeconds(try await track.load(.timeRange).duration) {
+            return seconds
+        }
+        throw CustomizationFailure("The video could not be read.")
+    }
+
+    static func finitePositiveSeconds(_ time: CMTime) -> Double? {
+        guard time.isNumeric else { return nil }
+        let seconds = time.seconds
+        guard seconds.isFinite, seconds > 0 else { return nil }
+        return seconds
     }
 
     static func template() throws -> URL {
@@ -81,7 +102,7 @@ enum WallpaperVideos {
             throw CustomizationFailure("The video could not be read.")
         }
         let (naturalSize, transform, nominalRate) = try await track.load(.naturalSize, .preferredTransform, .nominalFrameRate)
-        let duration = try await asset.load(.duration).seconds
+        let duration = try await Self.duration(of: video)
         let orientation = Self.orientation(for: transform)
         var size = naturalSize.applying(transform)
         size = CGSize(width: abs(size.width), height: abs(size.height))
@@ -89,7 +110,10 @@ enum WallpaperVideos {
         let width = Int((size.width * scale).rounded()), height = Int((size.height * scale).rounded())
         let sourceRate = nominalRate > 0 ? Double(nominalRate) : maximumFrameRate
         let frameRate = min(sourceRate, maximumFrameRate)
-        let expected = max(1, Int(duration * frameRate))
+        let expected = max(1, Int((duration * frameRate).rounded(.towardZero)))
+        if expected > maximumFrameCount {
+            throw CustomizationFailure("The video is too long to convert into a wallpaper.")
+        }
 
         let reader = try AVAssetReader(asset: asset)
         let output = AVAssetReaderTrackOutput(track: track, outputSettings: [
@@ -111,6 +135,7 @@ enum WallpaperVideos {
             if time.isFinite, time + 0.001 < nextTime { continue }
             nextTime = (time.isFinite ? time : 0) + interval
             guard let buffer = CMSampleBufferGetImageBuffer(sample) else { continue }
+            if frames >= maximumFrameCount { break }
             try autoreleasepool {
                 var image = CIImage(cvPixelBuffer: buffer).oriented(orientation)
                 if scale < 1 { image = image.transformed(by: CGAffineTransform(scaleX: scale, y: scale)) }
@@ -306,7 +331,15 @@ final class LoopingPlayerUIView: UIView {
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
     override func layoutSubviews() { super.layoutSubviews(); playerLayer.frame = bounds }
-    func stop() { player.pause(); looper?.disableLooping(); looper = nil }
+    deinit { stop() }
+    func stop() {
+        player.pause()
+        looper?.disableLooping()
+        looper = nil
+        player.replaceCurrentItem(with: nil)
+        player.removeAllItems()
+        playerLayer.player = nil
+    }
 }
 
 struct LoopingVideoPlayer: UIViewRepresentable {

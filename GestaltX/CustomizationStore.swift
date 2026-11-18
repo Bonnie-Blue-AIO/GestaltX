@@ -251,10 +251,39 @@ actor CustomizationStore {
         return try listWallpapers()
     }
 
+    /// Installation records left after Delete: the pack folder is gone, but
+    /// WallpaperInstallations/ still tracks descriptors on the device.
+    /// Packs still in Wallpapers/ are excluded so `removeWallpaper` is not used
+    /// on them (that API also deletes the library copy).
+    private func deletedPackInstallationIDs() throws -> (owned: [UUID], foreign: Bool) {
+        let directory = try CustomizationFiles.checked("WallpaperInstallations", in: storage, missing: true)
+        guard fm.fileExists(atPath: directory.path) else { return ([], false) }
+        let values = try directory.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
+        guard values.isDirectory == true, values.isSymbolicLink != true else {
+            throw CustomizationFailure("The archive contains unsafe paths or links.")
+        }
+        var owned: [UUID] = []
+        var foreign = false
+        for url in try fm.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey]) {
+            guard url.pathExtension.lowercased() == "plist",
+                  let id = UUID(uuidString: url.deletingPathExtension().lastPathComponent) else { continue }
+            let packFolder = try CustomizationFiles.checked("Wallpapers/\(id.uuidString)", in: storage, missing: true)
+            if fm.fileExists(atPath: packFolder.path) { continue }
+            let snapshots = try installationRecords(id).map { try decodePack($0, id: id) }
+            if snapshots.contains(where: { !$0.installations.isEmpty && $0.installedDevice == device }) {
+                owned.append(id)
+            } else if snapshots.contains(where: { !$0.installations.isEmpty && $0.installedDevice != nil && $0.installedDevice != device }) {
+                foreign = true
+            }
+        }
+        return (owned.sorted { $0.uuidString < $1.uuidString }, foreign)
+    }
+
     func hasRestorableWallpapers() throws -> Bool {
         if try listWallpapers().contains(where: { $0.isApplied && ($0.installedDevice == nil || $0.installedDevice == device) }) {
             return true
         }
+        if try !deletedPackInstallationIDs().owned.isEmpty { return true }
         return posterBoardDefaultsJournalHasOriginals()
     }
 
@@ -274,10 +303,16 @@ actor CustomizationStore {
     func restoreOriginalWallpapers() throws -> [WallpaperPack] {
         let packs = try listWallpapers()
         let owned = packs.filter { $0.isApplied && ($0.installedDevice == nil || $0.installedDevice == device) }
-        let foreign = packs.contains { $0.isApplied && $0.installedDevice != nil && $0.installedDevice != device }
-        guard !owned.isEmpty || posterBoardDefaultsJournalHasOriginals() else {
+        let leftover = try deletedPackInstallationIDs()
+        let foreign = leftover.foreign || packs.contains { $0.isApplied && $0.installedDevice != nil && $0.installedDevice != device }
+        guard !owned.isEmpty || !leftover.owned.isEmpty || posterBoardDefaultsJournalHasOriginals() else {
             if foreign { throw CustomizationFailure("These wallpapers were applied on a different device. They were not removed.") }
             throw CustomizationFailure("There is nothing to restore.")
+        }
+        // Deleted packs: reuse removeWallpaper, which reads WallpaperInstallations/ and
+        // uninstalls those descriptors without requiring the library folder to still exist.
+        for id in leftover.owned {
+            _ = try removeWallpaper(id)
         }
         try access("com.apple.PosterBoard") { root in
             for pack in owned {
