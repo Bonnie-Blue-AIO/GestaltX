@@ -81,11 +81,21 @@ jobs:
           export BUILD_DATE="$(date -u +%F)"
           .github/scripts/build-ipa.sh "$RUNNER_TEMP/ipa"
 
+      - name: Name IPA GestaltX-v<version>
+        id: named
+        env:
+          SRC: ${{ steps.build.outputs.ipa }}
+          VERSION: ${{ steps.build.outputs.version }}
+        run: |
+          dest="$(dirname "$SRC")/GestaltX-v${VERSION}.ipa"
+          mv -f "$SRC" "$dest"
+          echo "ipa=$dest" >> "$GITHUB_OUTPUT"
+
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v7
         with:
-          name: GestaltX-${{ steps.build.outputs.version }}
-          path: ${{ steps.build.outputs.ipa }}
+          name: GestaltX-v${{ steps.build.outputs.version }}
+          path: ${{ steps.named.outputs.ipa }}
           if-no-files-found: error
           retention-days: 14
 
@@ -93,7 +103,7 @@ jobs:
         if: env.TAG != ''
         env:
           GH_TOKEN: ${{ github.token }}
-          IPA: ${{ steps.build.outputs.ipa }}
+          IPA: ${{ steps.named.outputs.ipa }}
         run: |
           version="${TAG#v}"
           notes="$RUNNER_TEMP/release-notes.md"
