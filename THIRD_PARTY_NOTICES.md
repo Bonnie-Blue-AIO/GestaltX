@@ -35,3 +35,9 @@ GitHub mark: Primer Octicons (GitHub), MIT license.
 Source: https://raw.githubusercontent.com/primer/octicons/main/icons/mark-github-16.svg
 Full license: Primer-Octicons-MIT.txt in the application bundle.
 GitHub names and marks remain GitHub trademarks.
+
+
+4a. Dialer Themer
+Erosion Dialer Themer: https://github.com/jailbreakdotparty/Erosion
+lunginspector / jailbreak.party. GNU GPL v3; full text: GestaltX/Licenses/Erosion-GPL-3.0.txt.
+Ported KeypadManager / KeypadView into GestaltX, using GestaltX's resolveDataContainer, acquirePath / worse_query, and ZIPFoundation. No Erosion IPA binary was copied.
